@@ -117,3 +117,22 @@ func run() error {
 }
 
 ```
+
+## Run examples
+examples include grpc client and server sample code
+
+### Load dependency
+
+```bash
+go mod dity
+```
+
+### Run server for example
+```bash
+go run ./examples/server
+```
+
+### Run client for example
+```bash
+go run ./examples/client
+```
