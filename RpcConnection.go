@@ -151,7 +151,13 @@ func (c *RpcConnection) respondRequest(message *Message) {
 		return
 	}
 
-	data := c.onMessageHanle(c, message.Data)
+	var data []byte
+	if message.ID < initialIDValue {
+		// TODO: 处理 ping 之类的内部消息
+		data = nil
+	} else {
+		data = c.onMessageHanle(c, message.Data)
+	}
 
 	responseMessage := &Message{ID: message.ID, IsAck: true, Data: data, Timestamp: time.Now().Unix()}
 
