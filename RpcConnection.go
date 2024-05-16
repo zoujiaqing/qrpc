@@ -33,6 +33,10 @@ func NewRpcConnection(id uint64, ctx context.Context, conn quic.Connection, time
 	return connection
 }
 
+func (c *RpcConnection) ID() uint64 {
+	return c.id
+}
+
 func (c *RpcConnection) AddMetadata(key, value string) {
 	c.metadata[key] = value
 }
