@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"log"
 	"math/big"
-	"strconv"
 	"sync"
 	"time"
 
@@ -67,11 +66,10 @@ func (s *Server) Accept(ctx context.Context) {
 
 func (s *Server) handleConn(ctx context.Context, conn quic.Connection) {
 	connID := s.idGenerator.Next()
-	rpcConn := NewRpcConnection(ctx, conn, 3)
+	rpcConn := NewRpcConnection(connID, ctx, conn, 3)
 	rpcConn.OnClose(func() {
 		s.removeConnection(connID)
 	})
-	rpcConn.AddMetadata("id", strconv.FormatUint(connID, 10))
 
 	s.mutex.Lock()
 	s.connections[connID] = rpcConn

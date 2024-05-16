@@ -11,6 +11,7 @@ import (
 type MessageHandler func(*RpcConnection, []byte) []byte
 
 type RpcConnection struct {
+	id             uint64
 	ctx            context.Context
 	conn           quic.Connection
 	broker         *MessageBroker
@@ -19,9 +20,10 @@ type RpcConnection struct {
 	metadata       map[string]string
 }
 
-func NewRpcConnection(ctx context.Context, conn quic.Connection, timeout uint) *RpcConnection {
+func NewRpcConnection(id uint64, ctx context.Context, conn quic.Connection, timeout uint) *RpcConnection {
 	broker := NewMessageBroker(time.Second * time.Duration(timeout))
 	connection := &RpcConnection{
+		id:       id,
 		ctx:      ctx,
 		conn:     conn,
 		broker:   broker,

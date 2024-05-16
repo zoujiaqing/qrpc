@@ -32,7 +32,8 @@ func NewClient(addr string, port uint) *Client {
 		RetryDelay:   3, // 如果断联3秒后重试
 		reconnectCh:  make(chan struct{}),
 		reconnectErr: make(chan error),
-		pingInterval: 3 * time.Second, // 默认每 3 秒发送一次 Ping 请求
+		pingInterval: 3 * time.Second, // 默认每 1 秒发送一次 Ping 请求
+		pingValue:    -1,              // 默认是 -1 不通状态
 	}
 
 	return client
@@ -62,7 +63,7 @@ func (c *Client) Connect() error {
 		return err
 	}
 
-	c.conn = NewRpcConnection(conn.Context(), conn, 3)
+	c.conn = NewRpcConnection(1, conn.Context(), conn, 3)
 	c.conn.OnClose(c.handleConnectionClosed)
 	c.conn.OnRequest(c.handleMessage)
 
@@ -89,6 +90,7 @@ func (c *Client) startPingTimer() {
 				pingValue, err := c.conn.Ping()
 				if err != nil {
 					log.Printf("Ping error: %v", err)
+					c.pingValue = -1
 					// 处理 Ping 错误，可以重连或者其他处理
 				} else {
 					c.pingValue = pingValue
