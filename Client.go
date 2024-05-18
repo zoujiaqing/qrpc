@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"log"
+	"net"
 	"time"
 
 	"github.com/quic-go/quic-go"
@@ -13,8 +14,8 @@ import (
 type RequestMessageHandler func(data []byte) []byte
 
 type Client struct {
-	Addr           string
-	Port           uint
+	addr           string
+	port           uint
 	RetryDelay     time.Duration
 	conn           *RpcConnection
 	onMessageHanle RequestMessageHandler
@@ -27,8 +28,8 @@ type Client struct {
 
 func NewClient(addr string, port uint) *Client {
 	client := &Client{
-		Addr:         addr,
-		Port:         port,
+		addr:         addr,
+		port:         port,
 		RetryDelay:   3, // 如果断联3秒后重试
 		reconnectCh:  make(chan struct{}),
 		reconnectErr: make(chan error),
@@ -37,6 +38,10 @@ func NewClient(addr string, port uint) *Client {
 	}
 
 	return client
+}
+
+func (c *Client) RemoteAddr() net.Addr {
+	return c.conn.RemoteAddr()
 }
 
 func (c *Client) OnRequest(handle RequestMessageHandler) {
@@ -55,14 +60,13 @@ func (c *Client) Connect() error {
 
 	conn, err := quic.DialAddr(
 		context.Background(),
-		fmt.Sprintf("%s:%d", c.Addr, c.Port),
+		fmt.Sprintf("%s:%d", c.addr, c.port),
 		tlsConf,
 		quicConf)
 
 	if err != nil {
 		return err
 	}
-
 	c.conn = NewRpcConnection(1, conn.Context(), conn, 3)
 	c.conn.OnClose(c.handleConnectionClosed)
 	c.conn.OnRequest(c.handleMessage)
