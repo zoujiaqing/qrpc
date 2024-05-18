@@ -3,6 +3,7 @@ package qrpc
 import (
 	"context"
 	"log"
+	"net"
 	"time"
 
 	"github.com/quic-go/quic-go"
@@ -18,16 +19,18 @@ type RpcConnection struct {
 	onCloseHandle  func()
 	onMessageHanle MessageHandler
 	metadata       map[string]string
+	remoteAddr     net.Addr
 }
 
 func NewRpcConnection(id uint64, ctx context.Context, conn quic.Connection, timeout uint) *RpcConnection {
 	broker := NewMessageBroker(time.Second * time.Duration(timeout))
 	connection := &RpcConnection{
-		id:       id,
-		ctx:      ctx,
-		conn:     conn,
-		broker:   broker,
-		metadata: make(map[string]string),
+		id:         id,
+		ctx:        ctx,
+		conn:       conn,
+		broker:     broker,
+		metadata:   make(map[string]string),
+		remoteAddr: conn.RemoteAddr(),
 	}
 	connection.startReceive()
 	return connection
@@ -35,6 +38,10 @@ func NewRpcConnection(id uint64, ctx context.Context, conn quic.Connection, time
 
 func (c *RpcConnection) ID() uint64 {
 	return c.id
+}
+
+func (c *RpcConnection) RemoteAddr() net.Addr {
+	return c.remoteAddr
 }
 
 func (c *RpcConnection) AddMetadata(key, value string) {
