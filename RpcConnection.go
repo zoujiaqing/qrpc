@@ -10,13 +10,14 @@ import (
 )
 
 type MessageHandler func(*RpcConnection, []byte) []byte
+type ClosedHandler func(*RpcConnection)
 
 type RpcConnection struct {
 	id             uint64
 	ctx            context.Context
 	conn           quic.Connection
 	broker         *MessageBroker
-	onCloseHandle  func()
+	onCloseHandle  ClosedHandler
 	onMessageHanle MessageHandler
 	metadata       map[string]string
 	remoteAddr     net.Addr
@@ -57,14 +58,14 @@ func (c *RpcConnection) GetMetadata(key string) (string, bool) {
 	return value, ok
 }
 
-func (c *RpcConnection) OnClose(handle func()) {
+func (c *RpcConnection) OnClose(handle ClosedHandler) {
 	c.onCloseHandle = handle
 }
 
 // Close 关闭连接
 func (c *RpcConnection) Close() {
 	if c.onCloseHandle != nil {
-		c.onCloseHandle() // 调用 onClose 回调
+		c.onCloseHandle(c) // 调用 onClose 回调
 	}
 	if err := c.conn.CloseWithError(0, "connection closed"); err != nil {
 		log.Printf("Failed to close connection: %v", err)

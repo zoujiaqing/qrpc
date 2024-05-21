@@ -34,31 +34,37 @@ func run() error {
 		return append([]byte("From Client Respond "), data...)
 	})
 
-	go func() {
-		var i uint64 = 1
-		for {
-			data, err := client.Request([]byte("Hello1"))
-			if err != nil {
-				log.Printf("Request error: %v", err)
-			}
-			log.Printf("Respond1(%d): %s", i, string(data))
-			time.Sleep(10 * time.Millisecond)
-			i++
-		}
-	}()
+	// go func() {
+	// 	var i uint64 = 1
+	// 	for {
+	// 		data, err := client.Request([]byte("Hello1"))
+	// 		if err != nil {
+	// 			log.Printf("Request error: %v", err)
+	// 		}
+	// 		log.Printf("Respond1(%d): %s", i, string(data))
+	// 		time.Sleep(10 * time.Millisecond)
+	// 		i++
+	// 	}
+	// }()
 
-	go func() {
-		var i uint64 = 1
-		for {
-			data, err := client.Request([]byte("Hello2"))
-			if err != nil {
-				log.Printf("Request error: %v", err)
-			}
-			log.Printf("Respond2(%d): %s", i, string(data))
-			time.Sleep(10 * time.Millisecond)
-			i++
-		}
-	}()
+	// go func() {
+	// 	var i uint64 = 1
+	// 	for {
+	// 		data, err := client.Request([]byte("Hello2"))
+	// 		if err != nil {
+	// 			log.Printf("Request error: %v", err)
+	// 		}
+	// 		log.Printf("Respond2(%d): %s", i, string(data))
+	// 		time.Sleep(10 * time.Millisecond)
+	// 		i++
+	// 	}
+	// }()
+
+	data, err := client.Request([]byte("Hello"))
+	if err != nil {
+		log.Printf("Request error: %v", err)
+	}
+	log.Printf("Respond: %s", string(data))
 
 	for {
 		// 输出 ping 值

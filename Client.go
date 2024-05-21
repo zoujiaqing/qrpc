@@ -30,7 +30,7 @@ func NewClient(addr string, port uint) *Client {
 	client := &Client{
 		addr:         addr,
 		port:         port,
-		RetryDelay:   3, // 如果断联3秒后重试
+		RetryDelay:   1, // 如果断联3秒后重试
 		reconnectCh:  make(chan struct{}),
 		reconnectErr: make(chan error),
 		pingInterval: 3 * time.Second, // 默认每 1 秒发送一次 Ping 请求
@@ -116,7 +116,7 @@ func (c *Client) handleMessage(conn *RpcConnection, data []byte) []byte {
 	return nil
 }
 
-func (c *Client) handleConnectionClosed() {
+func (c *Client) handleConnectionClosed(conn *RpcConnection) {
 	// 连接关闭时触发重连
 	for {
 		select {

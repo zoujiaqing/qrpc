@@ -24,6 +24,7 @@ type Server struct {
 	mutex              sync.Mutex
 	idGenerator        IDGenerator
 	onConnectionHandle ConnectionHandler
+	onClosedHandle     ClosedHandler
 }
 
 func NewServer(port uint) (*Server, error) {
@@ -48,6 +49,10 @@ func (s *Server) OnConnection(handle ConnectionHandler) {
 	s.onConnectionHandle = handle
 }
 
+func (s *Server) OnClose(handle ClosedHandler) {
+	s.onClosedHandle = handle
+}
+
 func (s *Server) Close() error {
 	return s.listener.Close()
 }
@@ -67,8 +72,11 @@ func (s *Server) Accept(ctx context.Context) {
 func (s *Server) handleConn(ctx context.Context, conn quic.Connection) {
 	connID := s.idGenerator.Next()
 	rpcConn := NewRpcConnection(connID, ctx, conn, 3)
-	rpcConn.OnClose(func() {
+	rpcConn.OnClose(func(conn *RpcConnection) {
 		s.removeConnection(connID)
+		if s.onClosedHandle != nil {
+			s.onClosedHandle(conn)
+		}
 	})
 
 	s.mutex.Lock()
