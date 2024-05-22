@@ -24,7 +24,8 @@ type Client struct {
 	pingInterval   time.Duration
 	pingTimer      *time.Timer
 	pingValue      int
-	timeout        uint // 超时时间（秒）
+	timeout        uint   // 超时时间（秒）
+	localIP        string // 本地网卡 IP
 }
 
 func NewClient(addr string, port uint) *Client {
@@ -54,25 +55,75 @@ func (c *Client) OnRequest(handle RequestMessageHandler) {
 	c.onMessageHanle = handle
 }
 
+func createCustomPacketConn(localIP string) (net.PacketConn, error) {
+	localAddr := &net.UDPAddr{
+		IP: net.ParseIP(localIP),
+	}
+	conn, err := net.ListenUDP("udp", localAddr)
+	if err != nil {
+		return nil, err
+	}
+	return conn, nil
+}
+
+func (c *Client) BindLocalIP(localIP string) {
+	c.localIP = localIP
+}
+
 func (c *Client) Connect() error {
 	tlsConf := &tls.Config{
 		InsecureSkipVerify: true,
 		NextProtos:         []string{"qrpc"},
 	}
+
 	quicConf := &quic.Config{
 		MaxIncomingStreams:    1e10, // bidirectional streams
 		MaxIncomingUniStreams: 1e10, // unidirectional streams
 	}
 
-	conn, err := quic.DialAddr(
-		context.Background(),
-		fmt.Sprintf("%s:%d", c.addr, c.port),
-		tlsConf,
-		quicConf)
+	serverAddr := fmt.Sprintf("%s:%d", c.addr, c.port)
 
-	if err != nil {
-		return err
+	// Create a context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	var conn quic.Connection
+	var err error
+
+	// Custom localIP
+	if c.localIP != "" {
+		log.Printf("Use bind localIP: %s", c.localIP)
+		// Use custom dialer to specify local address
+		packetConn, err := createCustomPacketConn(c.localIP)
+		if err != nil {
+			log.Printf("Failed to create packet connection: %v", err)
+			return err
+		}
+
+		// Resolve server address
+		serverUDPAddr, err := net.ResolveUDPAddr("udp", serverAddr)
+		if err != nil {
+			log.Printf("Failed to resolve server address: %v", err)
+			return err
+		}
+
+		// Dial QUIC session
+		conn, err = quic.Dial(ctx, packetConn, serverUDPAddr, tlsConf, quicConf)
+		if err != nil {
+			return err
+		}
+	} else {
+		conn, err = quic.DialAddr(
+			ctx,
+			serverAddr,
+			tlsConf,
+			quicConf)
+
+		if err != nil {
+			return err
+		}
 	}
+
 	c.conn = NewRpcConnection(1, conn.Context(), conn, c.timeout)
 	c.conn.OnClose(c.handleConnectionClosed)
 	c.conn.OnRequest(c.handleMessage)

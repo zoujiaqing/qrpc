@@ -26,6 +26,9 @@ func run() error {
 
 	client := qrpc.NewClient(*addr, *port)
 
+	// bind local IP
+	client.BindLocalIP("10.10.101.1")
+
 	if err := client.Connect(); err != nil {
 		return err
 	}
