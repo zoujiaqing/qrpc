@@ -21,6 +21,7 @@ type RpcConnection struct {
 	onMessageHanle MessageHandler
 	metadata       map[string]string
 	remoteAddr     net.Addr
+	connected      bool
 }
 
 func NewRpcConnection(id uint64, ctx context.Context, conn quic.Connection, timeout uint) *RpcConnection {
@@ -32,6 +33,7 @@ func NewRpcConnection(id uint64, ctx context.Context, conn quic.Connection, time
 		broker:     broker,
 		metadata:   make(map[string]string),
 		remoteAddr: conn.RemoteAddr(),
+		connected:  true,
 	}
 	connection.startReceive()
 	return connection
@@ -64,12 +66,16 @@ func (c *RpcConnection) OnClose(handle ClosedHandler) {
 
 // Close 关闭连接
 func (c *RpcConnection) Close() {
+	if !c.connected {
+		return
+	}
 	if c.onCloseHandle != nil {
 		c.onCloseHandle(c) // 调用 onClose 回调
 	}
 	if err := c.conn.CloseWithError(0, "connection closed"); err != nil {
 		log.Printf("Failed to close connection: %v", err)
 	}
+	c.connected = false
 }
 
 func (c *RpcConnection) Ping() (int, error) {
@@ -208,6 +214,7 @@ func (c *RpcConnection) startReceive() {
 			stream, err := c.conn.AcceptStream(c.ctx)
 			if err != nil {
 				log.Printf("Accept stream error: %v", err)
+				c.Close()
 				return
 			}
 
