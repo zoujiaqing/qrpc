@@ -30,10 +30,10 @@ func NewClient(addr string, port uint) *Client {
 	client := &Client{
 		addr:         addr,
 		port:         port,
-		RetryDelay:   1, // 如果断联3秒后重试
+		RetryDelay:   1, // 如果断联1秒后重试
 		reconnectCh:  make(chan struct{}),
 		reconnectErr: make(chan error),
-		pingInterval: 3 * time.Second, // 默认每 1 秒发送一次 Ping 请求
+		pingInterval: 1 * time.Second, // 默认每 1 秒发送一次 Ping 请求
 		pingValue:    -1,              // 默认是 -1 不通状态
 	}
 

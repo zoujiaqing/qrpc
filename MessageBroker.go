@@ -43,9 +43,15 @@ func NewMessageBroker(timeout time.Duration) *MessageBroker {
 }
 
 // Send 发送消息并等待回复，如果超时返回错误
-func (b *MessageBroker) Send(request *Message) (*Message, error) {
+func (b *MessageBroker) Send(request *Message, timeout int) (*Message, error) {
 	// 创建一个用于接收回复的通道
 	responseCh := make(chan *Message, 1)
+
+	// 本次请求 timeout
+	thisTimeout := b.timeout
+	if timeout > 0 {
+		thisTimeout = time.Second * time.Duration(timeout)
+	}
 
 	// 将通道与请求消息的ID关联起来
 	b.mu.Lock()
@@ -60,7 +66,7 @@ func (b *MessageBroker) Send(request *Message) (*Message, error) {
 	case response := <-responseCh:
 		// 成功接收到回复，返回回复消息
 		return response, nil
-	case <-time.After(b.timeout):
+	case <-time.After(thisTimeout):
 		// 超时，删除关联的通道
 		b.mu.Lock()
 		delete(b.messageMap, request.ID)

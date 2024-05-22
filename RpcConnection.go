@@ -82,8 +82,9 @@ func (c *RpcConnection) Ping() (int, error) {
 
 	// 发送 ping 请求并记录返回时间
 	start := time.Now()
-	// TODO: ping 请求添加一个合适的超时时间
-	_, err := c.sendRequest(message)
+	// Ping 超时时间设定为 1 秒
+	timeout := 1
+	_, err := c.sendRequest(message, timeout)
 	if err != nil {
 		return 0, err
 	}
@@ -102,14 +103,14 @@ func (c *RpcConnection) Request(data []byte) ([]byte, error) {
 		Timestamp: time.Now().Unix(),
 	}
 
-	return c.sendRequest(message)
+	return c.sendRequest(message, 0)
 }
 
 func (c *RpcConnection) OnRequest(handle MessageHandler) {
 	c.onMessageHanle = handle
 }
 
-func (c *RpcConnection) sendRequest(message Message) ([]byte, error) {
+func (c *RpcConnection) sendRequest(message Message, timeout int) ([]byte, error) {
 	// 创建一个用于接收 response 的 channel
 	responseCh, errorCh := make(chan *Message, 1), make(chan error, 1)
 
@@ -131,7 +132,7 @@ func (c *RpcConnection) sendRequest(message Message) ([]byte, error) {
 		}
 
 		// 等待回复
-		response, err := c.broker.Send(&message)
+		response, err := c.broker.Send(&message, timeout)
 		if err != nil {
 			log.Printf("Error sending request: %v", err)
 			errorCh <- err
