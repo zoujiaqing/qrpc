@@ -25,6 +25,7 @@ type Server struct {
 	idGenerator        IDGenerator
 	onConnectionHandle ConnectionHandler
 	onClosedHandle     ClosedHandler
+	timeout            uint
 }
 
 func NewServer(port uint) (*Server, error) {
@@ -42,7 +43,12 @@ func NewServer(port uint) (*Server, error) {
 		listener:    listener,
 		connections: map[uint64]*RpcConnection{},
 		idGenerator: IDGenerator{seq: initialIDValue},
+		timeout:     15,
 	}, nil
+}
+
+func (s *Server) SetTimeout(timeout uint) {
+	s.timeout = timeout
 }
 
 func (s *Server) OnConnection(handle ConnectionHandler) {
@@ -71,7 +77,7 @@ func (s *Server) Accept(ctx context.Context) {
 
 func (s *Server) handleConn(ctx context.Context, conn quic.Connection) {
 	connID := s.idGenerator.Next()
-	rpcConn := NewRpcConnection(connID, ctx, conn, 3)
+	rpcConn := NewRpcConnection(connID, ctx, conn, s.timeout)
 	rpcConn.OnClose(func(conn *RpcConnection) {
 		s.removeConnection(connID)
 		if s.onClosedHandle != nil {

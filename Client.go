@@ -24,6 +24,7 @@ type Client struct {
 	pingInterval   time.Duration
 	pingTimer      *time.Timer
 	pingValue      int
+	timeout        uint // 超时时间（秒）
 }
 
 func NewClient(addr string, port uint) *Client {
@@ -35,9 +36,14 @@ func NewClient(addr string, port uint) *Client {
 		reconnectErr: make(chan error),
 		pingInterval: 1 * time.Second, // 默认每 1 秒发送一次 Ping 请求
 		pingValue:    -1,              // 默认是 -1 不通状态
+		timeout:      15,              // 默认超时时间 15 秒
 	}
 
 	return client
+}
+
+func (c *Client) SetTimeout(timeout uint) {
+	c.timeout = timeout
 }
 
 func (c *Client) RemoteAddr() net.Addr {
@@ -67,7 +73,7 @@ func (c *Client) Connect() error {
 	if err != nil {
 		return err
 	}
-	c.conn = NewRpcConnection(1, conn.Context(), conn, 3)
+	c.conn = NewRpcConnection(1, conn.Context(), conn, c.timeout)
 	c.conn.OnClose(c.handleConnectionClosed)
 	c.conn.OnRequest(c.handleMessage)
 
