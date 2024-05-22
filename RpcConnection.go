@@ -117,6 +117,7 @@ func (c *RpcConnection) sendRequest(message Message, timeout int) ([]byte, error
 	// 打开一个新的流
 	stream, err := c.conn.OpenStream()
 	if err != nil {
+		c.Close()
 		return nil, err
 	}
 
@@ -127,6 +128,7 @@ func (c *RpcConnection) sendRequest(message Message, timeout int) ([]byte, error
 		// 将消息写入到流中
 		if err := message.Write(stream); err != nil {
 			log.Printf("Write message error: %v", err)
+			c.Close()
 			errorCh <- err
 			return
 		}
@@ -135,6 +137,7 @@ func (c *RpcConnection) sendRequest(message Message, timeout int) ([]byte, error
 		response, err := c.broker.Send(&message, timeout)
 		if err != nil {
 			log.Printf("Error sending request: %v", err)
+			c.Close()
 			errorCh <- err
 			return
 		}

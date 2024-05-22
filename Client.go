@@ -43,6 +43,11 @@ func NewClient(addr string, port uint) *Client {
 	return client
 }
 
+func (c *Client) stopPing() {
+	c.pingValue = -1
+	c.pingTimer.Stop()
+}
+
 func (c *Client) SetTimeout(timeout uint) {
 	c.timeout = timeout
 }
@@ -159,7 +164,7 @@ func (c *Client) startPingTimer() {
 				c.pingTimer.Reset(c.pingInterval) // 重新设置定时器
 			case <-c.reconnectCh:
 				// 停止定时器
-				c.pingTimer.Stop()
+				c.stopPing()
 				return
 			}
 		}
@@ -180,6 +185,10 @@ func (c *Client) handleConnectionClosed(conn *RpcConnection) {
 		case <-c.reconnectCh:
 			return // 收到断开连接信号，停止重连
 		default:
+			log.Printf("stooooooooooop timer.")
+			// 停止定时器
+			c.stopPing()
+
 			time.Sleep(c.RetryDelay)
 
 			err := c.Connect()
