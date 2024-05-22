@@ -208,7 +208,6 @@ func (c *RpcConnection) startReceive() {
 			stream, err := c.conn.AcceptStream(c.ctx)
 			if err != nil {
 				log.Printf("Accept stream error: %v", err)
-				c.Close()
 				return
 			}
 
