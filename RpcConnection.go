@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/quic-go/quic-go"
@@ -22,6 +23,7 @@ type RpcConnection struct {
 	metadata       map[string]string
 	remoteAddr     net.Addr
 	connected      bool
+	connectMu      sync.Mutex
 }
 
 func NewRpcConnection(id uint64, ctx context.Context, conn quic.Connection, timeout uint) *RpcConnection {
@@ -66,6 +68,8 @@ func (c *RpcConnection) OnClose(handle ClosedHandler) {
 
 // Close 关闭连接
 func (c *RpcConnection) Close() {
+	c.connectMu.Lock()
+	defer c.connectMu.Unlock()
 	if !c.connected {
 		return
 	}

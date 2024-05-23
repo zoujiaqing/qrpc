@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/quic-go/quic-go"
+	"github.com/syndtr/goleveldb/leveldb/errors"
 )
 
 type RequestMessageHandler func(data []byte) []byte
@@ -18,6 +20,8 @@ type Client struct {
 	port           uint
 	RetryDelay     time.Duration
 	conn           *RpcConnection
+	connected      bool
+	connectMu      sync.Mutex
 	onMessageHanle RequestMessageHandler
 	reconnectCh    chan struct{}
 	reconnectErr   chan error
@@ -76,6 +80,14 @@ func (c *Client) BindLocalIP(localIP string) {
 }
 
 func (c *Client) Connect() error {
+	c.connectMu.Lock()
+	defer c.connectMu.Unlock()
+
+	if c.connected {
+		log.Printf("can't allow repeat connect.")
+		return errors.New("can't allow repeat connect.")
+	}
+
 	tlsConf := &tls.Config{
 		InsecureSkipVerify: true,
 		NextProtos:         []string{"qrpc"},
@@ -133,6 +145,8 @@ func (c *Client) Connect() error {
 	c.conn.OnClose(c.handleConnectionClosed)
 	c.conn.OnRequest(c.handleMessage)
 
+	c.connected = true
+	c.ping()
 	// 启动定时器，定期发送 Ping 请求
 	c.startPingTimer()
 
@@ -153,14 +167,7 @@ func (c *Client) startPingTimer() {
 		for {
 			select {
 			case <-c.pingTimer.C:
-				pingValue, err := c.conn.Ping()
-				if err != nil {
-					log.Printf("Ping error: %v", err)
-					c.pingValue = -1
-					// 处理 Ping 错误，可以重连或者其他处理
-				} else {
-					c.pingValue = pingValue
-				}
+				c.ping()
 				c.pingTimer.Reset(c.pingInterval) // 重新设置定时器
 			case <-c.reconnectCh:
 				// 停止定时器
@@ -169,6 +176,17 @@ func (c *Client) startPingTimer() {
 			}
 		}
 	}()
+}
+
+func (c *Client) ping() {
+	pingValue, err := c.conn.Ping()
+	if err != nil {
+		log.Printf("Ping error: %v", err)
+		c.pingValue = -1
+		// 处理 Ping 错误，可以重连或者其他处理
+	} else {
+		c.pingValue = pingValue
+	}
 }
 
 func (c *Client) handleMessage(conn *RpcConnection, data []byte) []byte {
@@ -183,9 +201,15 @@ func (c *Client) handleConnectionClosed(conn *RpcConnection) {
 	for {
 		select {
 		case <-c.reconnectCh:
+			c.connectMu.Lock()
+			c.connected = false
+			c.connectMu.Unlock()
 			return // 收到断开连接信号，停止重连
 		default:
-			log.Printf("stooooooooooop timer.")
+			c.connectMu.Lock()
+			c.connected = false
+			c.connectMu.Unlock()
+
 			// 停止定时器
 			c.stopPing()
 
