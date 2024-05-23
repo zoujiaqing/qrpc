@@ -14,22 +14,24 @@ import (
 )
 
 type RequestMessageHandler func(data []byte) []byte
+type ConnectedHandler func(*Client)
 
 type Client struct {
-	addr           string
-	port           uint
-	RetryDelay     time.Duration
-	conn           *RpcConnection
-	connected      bool
-	connectMu      sync.Mutex
-	onMessageHanle RequestMessageHandler
-	reconnectCh    chan struct{}
-	reconnectErr   chan error
-	pingInterval   time.Duration
-	pingTimer      *time.Timer
-	pingValue      int
-	timeout        uint   // 超时时间（秒）
-	localIP        string // 本地网卡 IP
+	addr              string
+	port              uint
+	RetryDelay        time.Duration
+	conn              *RpcConnection
+	connected         bool
+	connectMu         sync.Mutex
+	onMessageHanle    RequestMessageHandler
+	onConnectedHandle ConnectedHandler
+	reconnectCh       chan struct{}
+	reconnectErr      chan error
+	pingInterval      time.Duration
+	pingTimer         *time.Timer
+	pingValue         int
+	timeout           uint   // 超时时间（秒）
+	localIP           string // 本地网卡 IP
 }
 
 func NewClient(addr string, port uint) *Client {
@@ -42,6 +44,7 @@ func NewClient(addr string, port uint) *Client {
 		pingInterval: 1 * time.Second, // 默认每 1 秒发送一次 Ping 请求
 		pingValue:    -1,              // 默认是 -1 不通状态
 		timeout:      15,              // 默认超时时间 15 秒
+		connected:    false,
 	}
 
 	return client
@@ -58,6 +61,10 @@ func (c *Client) SetTimeout(timeout uint) {
 
 func (c *Client) RemoteAddr() net.Addr {
 	return c.conn.RemoteAddr()
+}
+
+func (c *Client) OnConnect(handle ConnectedHandler) {
+	c.onConnectedHandle = handle
 }
 
 func (c *Client) OnRequest(handle RequestMessageHandler) {
@@ -81,7 +88,10 @@ func (c *Client) BindLocalIP(localIP string) {
 
 func (c *Client) Connect() error {
 	c.connectMu.Lock()
-	defer c.connectMu.Unlock()
+
+	defer func() {
+		c.connectMu.Unlock()
+	}()
 
 	if c.connected {
 		log.Printf("can't allow repeat connect.")
@@ -149,6 +159,10 @@ func (c *Client) Connect() error {
 	c.ping()
 	// 启动定时器，定期发送 Ping 请求
 	c.startPingTimer()
+
+	if c.onConnectedHandle != nil {
+		c.onConnectedHandle(c)
+	}
 
 	return nil
 }
