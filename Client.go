@@ -51,6 +51,7 @@ func NewClient(addr string, port uint) *Client {
 }
 
 func (c *Client) stopPing() {
+	log.Printf("Stop timer for ping.")
 	c.pingValue = -1
 	c.pingTimer.Stop()
 }
@@ -137,8 +138,11 @@ func (c *Client) Connect() error {
 		// Dial QUIC session
 		conn, err = quic.Dial(ctx, packetConn, serverUDPAddr, tlsConf, quicConf)
 		if err != nil {
+			log.Printf("Failed to connect server address: %s, localIP: %s, error: %v", serverAddr, c.localIP, err)
 			return err
 		}
+
+		log.Printf("Server connected! address: %s, localIP: %s", serverAddr, c.localIP)
 	} else {
 		conn, err = quic.DialAddr(
 			ctx,
@@ -147,8 +151,11 @@ func (c *Client) Connect() error {
 			quicConf)
 
 		if err != nil {
+			log.Printf("Connected server address: %s, error: %v", serverAddr, err)
 			return err
 		}
+
+		log.Printf("Server connected! address: %s", serverAddr)
 	}
 
 	c.conn = NewRpcConnection(1, conn.Context(), conn, c.timeout)
@@ -176,6 +183,7 @@ func (c *Client) GetPingValue() int {
 }
 
 func (c *Client) startPingTimer() {
+	log.Printf("Start timer for ping.")
 	c.pingTimer = time.NewTimer(c.pingInterval)
 	go func() {
 		for {

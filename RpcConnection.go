@@ -68,18 +68,22 @@ func (c *RpcConnection) OnClose(handle ClosedHandler) {
 
 // Close 关闭连接
 func (c *RpcConnection) Close() {
+	log.Printf("Connection closed")
 	c.connectMu.Lock()
 	defer c.connectMu.Unlock()
 	if !c.connected {
+		log.Printf("Connection has been closed")
 		return
 	}
 	if c.onCloseHandle != nil {
+		log.Printf("Call on close handle")
 		c.onCloseHandle(c) // 调用 onClose 回调
 	}
 	if err := c.conn.CloseWithError(0, "connection closed"); err != nil {
 		log.Printf("Failed to close connection: %v", err)
 	}
 	c.connected = false
+	log.Printf("Connection closed successfully")
 }
 
 func (c *RpcConnection) Ping() (int, error) {

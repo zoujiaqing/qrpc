@@ -26,42 +26,13 @@ func run() error {
 
 	client := qrpc.NewClient(*addr, *port)
 
-	// bind local IP
-	// client.BindLocalIP("10.10.101.1")
-
-	if err := client.Connect(); err != nil {
-		return err
-	}
-
 	client.OnRequest(func(data []byte) []byte {
 		return append([]byte("From Client Respond "), data...)
 	})
 
-	// go func() {
-	// 	var i uint64 = 1
-	// 	for {
-	// 		data, err := client.Request([]byte("Hello1"))
-	// 		if err != nil {
-	// 			log.Printf("Request error: %v", err)
-	// 		}
-	// 		log.Printf("Respond1(%d): %s", i, string(data))
-	// 		time.Sleep(10 * time.Millisecond)
-	// 		i++
-	// 	}
-	// }()
-
-	// go func() {
-	// 	var i uint64 = 1
-	// 	for {
-	// 		data, err := client.Request([]byte("Hello2"))
-	// 		if err != nil {
-	// 			log.Printf("Request error: %v", err)
-	// 		}
-	// 		log.Printf("Respond2(%d): %s", i, string(data))
-	// 		time.Sleep(10 * time.Millisecond)
-	// 		i++
-	// 	}
-	// }()
+	if err := client.Connect(); err != nil {
+		return err
+	}
 
 	data, err := client.Request([]byte("Hello"))
 	if err != nil {
@@ -70,7 +41,7 @@ func run() error {
 	log.Printf("Respond: %s", string(data))
 
 	for {
-		// 输出 ping 值
+		// print ping value
 		log.Printf("Ping: %d", client.GetPingValue())
 		time.Sleep(1 * time.Second)
 	}
