@@ -219,32 +219,19 @@ func (c *Client) handleMessage(conn *RpcConnection, data []byte) []byte {
 }
 
 func (c *Client) handleConnectionClosed(conn *RpcConnection) {
-	// 连接关闭时触发重连
-	for {
-		select {
-		case <-c.reconnectCh:
-			c.connectMu.Lock()
-			c.connected = false
-			c.connectMu.Unlock()
-			return // 收到断开连接信号，停止重连
-		default:
-			c.connectMu.Lock()
-			c.connected = false
-			c.connectMu.Unlock()
+	select {
+	case <-c.reconnectCh:
+		c.connectMu.Lock()
+		c.connected = false
+		c.connectMu.Unlock()
+		return // 收到断开连接信号，停止重连
+	default:
+		c.connectMu.Lock()
+		c.connected = false
+		c.connectMu.Unlock()
 
-			// 停止定时器
-			c.stopPing()
-
-			time.Sleep(c.RetryDelay)
-
-			err := c.Connect()
-			if err == nil {
-				// 重连成功
-				return
-			}
-
-			// 重连失败，继续尝试
-		}
+		// 停止定时器
+		c.stopPing()
 	}
 }
 
