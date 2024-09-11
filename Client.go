@@ -253,9 +253,9 @@ func (c *Client) holdReconnection() {
 		// 如果连续失败 3 次，延长重连间隔
 		if attempt >= 3 {
 			log.Printf("多次重连失败，等待更长时间再尝试")
-			time.Sleep(c.RetryDelay * 5)
+			time.Sleep(time.Duration(c.RetryDelay) * time.Second * 5)
 		} else {
-			time.Sleep(c.RetryDelay)
+			time.Sleep(time.Duration(c.RetryDelay) * time.Second)
 		}
 	}
 }
