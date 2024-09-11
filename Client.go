@@ -204,7 +204,6 @@ func (c *Client) startPingTimer() {
 					log.Printf("连接已关闭，停止PING")
 					return
 				}
-				log.Printf("持续PING")
 				c.ping()
 			case <-c.reconnectCh:
 				c.pingValue = -1
@@ -226,7 +225,6 @@ func (c *Client) ping() {
 	}
 
 	c.pingValue = pingValue
-	log.Printf("Ping: %d", c.pingValue)
 }
 
 func (c *Client) handleMessage(conn *RpcConnection, data []byte) []byte {
